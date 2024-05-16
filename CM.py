@@ -11,7 +11,8 @@ import re
 import subprocess
 import os
 import json
-from colorama import Fore, Style  # Add import statement for colorama module
+import colorama  # Add import statement for colorama module
+from colorama import Fore, Style  
 import dns.resolver
 from shodan import Shodan
 from censys.search import CensysHosts
