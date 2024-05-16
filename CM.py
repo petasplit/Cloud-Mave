@@ -137,6 +137,30 @@ async def reverse_ip_lookup(target):
     except Exception as e:
         print_out(Fore.RED + f"Error performing reverse IP lookup for {target}: {str(e)}")
 
+async def subdomain_scan(target):
+    print_out(Fore.CYAN + "Scanning for subdomains using Wayback Machine...")
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            'waybackurls', target,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await process.communicate()
+        subdomains = stdout.decode().split('\n')
+
+        for subdomain in subdomains:
+            try:
+                ip_address = resolve_ip(subdomain)
+                if ip_address:
+                    print_out(Style.BRIGHT + Fore.WHITE + "[SUBDOMAIN] " + Fore.GREEN + subdomain + " resolves to " + ip_address)
+                else:
+                    print_out(Style.BRIGHT + Fore.WHITE + "[SUBDOMAIN] " + Fore.RED + subdomain + " is not resolved")
+            except Exception:
+                pass
+    except FileNotFoundError:
+        print_out(Fore.RED + "Waybackurls not found. Please install it.")
+
 async def main():
     parser = argparse.ArgumentParser(description="CloudFail Enhanced")
     parser.add_argument('--target', metavar='TARGET', type=str, help='The target URL of the website')
