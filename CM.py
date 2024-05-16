@@ -123,11 +123,13 @@ def wildcard_check(domain):
     print_out(Fore.CYAN + "Checking for wildcard DNS...")
 
     try:
-        answers = dns.resolver.resolve(f'nonexistent.{domain}', 'A')
+        answers = dns.resolver.query(f'nonexistent.{domain}', 'A')
         if answers:
             print_out(Style.BRIGHT + Fore.WHITE + "[WILDCARD] " + Fore.RED + "Wildcard DNS is enabled")
     except dns.resolver.NXDOMAIN:
         print_out(Style.BRIGHT + Fore.WHITE + "[WILDCARD] " + Fore.GREEN + "No wildcard DNS records found")
+    except ImportError:
+        print_out(Fore.RED + "Error: dns.resolver module not found. Please make sure the dnspython library is installed.")
     except Exception as e:
         print_out(Fore.RED + "Error checking wildcard DNS: " + str(e))
 
