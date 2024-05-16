@@ -113,6 +113,8 @@ async def cname_lookup(domain):
         answers = dns.resolver.query(domain, 'CNAME')
         for cname in answers:
             print_out(Style.BRIGHT + Fore.WHITE + "[CNAME LOOKUP] " + Fore.GREEN + f"{domain} has CNAME record: {cname}")
+    except dns.resolver.NoAnswer:
+        print_out(Fore.YELLOW + f"No CNAME record found for {domain}")
     except Exception as e:
         print_out(Fore.RED + f"Error performing CNAME lookup for {domain}: {str(e)}")
 
