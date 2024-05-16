@@ -111,8 +111,8 @@ def dnssec_check(domain):
     print_out(Fore.CYAN + "Checking for DNSSEC...")
 
     try:
-        answers = dns.resolver.resolve(domain, 'DNSKEY')
-        if answers.rrset:
+        answers = dns.resolver.query(domain, 'DNSKEY')
+        if answers:
             print_out(Style.BRIGHT + Fore.WHITE + "[DNSSEC] " + Fore.GREEN + "DNSSEC is enabled")
     except dns.resolver.NoAnswer:
         print_out(Style.BRIGHT + Fore.WHITE + "[DNSSEC] " + Fore.RED + "No DNSSEC records found")
