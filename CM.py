@@ -11,9 +11,9 @@ import re
 import subprocess
 import os
 import json
-import colorama  # Add import statement for colorama module
-from colorama import Fore, Style  
-import dns.resolver
+import colorama
+from colorama import Fore, Style
+import dns.resolver  # Importing dns.resolver for DNS resolution
 from shodan import Shodan
 from censys.search import CensysHosts
 import collections
@@ -27,6 +27,13 @@ colorama.init()
 def print_out(data, end='\n'):
     datetimestr = str(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'))
     print(Style.NORMAL + "[" + datetimestr + "] " + re.sub(' +', ' ', data) + Style.RESET_ALL, ' ', end=end)
+
+def resolve_ip(hostname):
+    try:
+        ip_address = socket.gethostbyname(hostname)
+        return ip_address
+    except socket.gaierror:
+        return None
 
 def ip_in_subnetwork(ip_address, subnetwork):
     (ip_integer, version1) = ip_to_integer(ip_address)
@@ -181,6 +188,12 @@ async def certificate_transparency_scan(target):
             for cert in certs:
                 subdomain = cert['name_value']
                 print_out(Style.BRIGHT + Fore.WHITE + "[CT LOG] " + Fore.GREEN + f"Subdomain: {subdomain}")
+                print(Style.BRIGHT + "[CT LOG] Subdomain:", subdomain)
+ip_address = resolve_ip(subdomain)
+if ip_address:
+    print("- IP address:", ip_address)
+else:
+    print("- IP address: Not found")
                 await dns_lookup(subdomain)
         else:
             print_out(Fore.RED + "Error retrieving CT logs")
