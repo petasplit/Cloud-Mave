@@ -82,9 +82,9 @@ async def dnsdumpster(target):
 
     # Placeholder for DNSDumpster code. Add actual API call if available.
 
-async def crt_sh_search(target):
+async def certificate_transparency_scan(target):
     print_out(Fore.CYAN + "Searching Certificate Transparency logs for subdomains...")
-    
+
     url = f"https://crt.sh/?q=%25.{target}&output=json"
     try:
         response = requests.get(url)
@@ -93,8 +93,17 @@ async def crt_sh_search(target):
             for cert in certs:
                 subdomain = cert['name_value']
                 print_out(Style.BRIGHT + Fore.WHITE + "[CRT.SH] " + Fore.GREEN + f"Subdomain: {subdomain}")
+
+                try:
+                    ip_address = resolve_ip(subdomain)
+                    if ip_address:
+                        print_out(Style.BRIGHT + Fore.WHITE + "[CRT.SH] " + Fore.GREEN + f"Subdomain: {subdomain} resolves to {ip_address}")
+                    else:
+                        print_out(Style.BRIGHT + Fore.WHITE + "[CRT.SH] " + Fore.RED + f"No IP address found for subdomain: {subdomain}")
+                except Exception as e:
+                    print_out(Style.BRIGHT + Fore.WHITE + "[CRT.SH] " + Fore.RED + f"Error resolving IP for {subdomain}: {e}")
     except Exception as e:
-        print_out(Fore.RED + "Error searching CRT.SH logs: " + str(e))
+        print_out(Fore.RED + "Error retrieving CT logs: " + str(e))
 
 async def dns_lookup(domain):
     print_out(Fore.CYAN + f"Performing DNS lookup for domain: {domain}...")
