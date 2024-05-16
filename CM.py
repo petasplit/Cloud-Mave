@@ -12,9 +12,10 @@ import os
 import json
 import colorama
 from colorama import Fore, Style
-import dns.resolver
-import crtsh
-import dnsdumpster
+import dns.resolver  # Importing dns.resolver for DNS resolution
+import collections
+
+collections.Callable = collections.abc.Callable
 
 # Initialize colorama
 colorama.init()
@@ -26,10 +27,9 @@ def print_out(data, end='\n'):
 
 def resolve_ip(hostname):
     try:
-        answers = dns.resolver.resolve(hostname, 'A')
-        ip_address = answers[0].address
+        ip_address = socket.gethostbyname(hostname)
         return ip_address
-    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+    except socket.gaierror:
         return None
 
 def ip_in_subnetwork(ip_address, subnetwork):
@@ -76,61 +76,92 @@ def subnetwork_to_ip_range(subnetwork):
 
     raise ValueError("invalid subnetwork")
 
-async def dnsdumpster_search(target):
-    print_out(Fore.CYAN + "Searching for subdomains using DNSDumpster...")
+# Functions to interact with external services
+async def dnsdumpster(target):
+    print_out(Fore.CYAN + "Testing for misconfigured DNS using DNSDumpster...")
 
+    # Placeholder for DNSDumpster code. Add actual API call if available.
+
+async def crt_sh_search(target):
+    print_out(Fore.CYAN + "Searching crt.sh for certificates related to the target...")
+
+    url = f"https://crt.sh/?q=%25.{target}&output=json"
     try:
-        res = dnsdumpster.DNSDumpsterAPI(False).search(target)
-        subdomains = res['dns_records']['host']
-        for subdomain in subdomains:
-            print_out(Style.BRIGHT + Fore.WHITE + "[SUBDOMAIN] " + Fore.GREEN + subdomain['domain'])
-            await dns_lookup(subdomain['domain'])
+        response = requests.get(url)
+        if response.status_code == 200:
+            certs = response.json()
+            for cert in certs:
+                subdomain = cert['name_value']
+                print_out(Style.BRIGHT + Fore.WHITE + "[CT LOG] " + Fore.GREEN + f"Subdomain: {subdomain}")
+                ip_address = resolve_ip(subdomain)
+                if ip_address:
+                    print("- IP address:", ip_address)
+                else:
+                    print("- IP address: Not found")
     except Exception as e:
-        print_out(Fore.RED + "Error searching DNSDumpster: " + str(e))
-
-async def crtsh_search(target):
-    print_out(Fore.CYAN + "Searching Certificate Transparency logs for subdomains...")
-
-    try:
-        c = crtsh.Crtsh()
-        results = c.search(target)
-        for result in results:
-            subdomain = result['name_value']
-            print_out(Style.BRIGHT + Fore.WHITE + "[CT LOG] " + Fore.GREEN + f"Subdomain: {subdomain}")
-            await dns_lookup(subdomain)
-    except Exception as e:
-        print_out(Fore.RED + "Error searching crt.sh: " + str(e))
+        print_out(Fore.RED + "Error searching CT logs: " + str(e))
 
 async def dns_lookup(domain):
     try:
-        answers = dns.resolver.resolve(domain, 'A')
+        answers = dns.resolver.resolve(domain)
         for ip in answers:
-            print_out(Style.BRIGHT + Fore.WHITE + "[DNS LOOKUP] " + Fore.GREEN + domain + " resolves to " + str(ip))
-    except Exception as e:
-        print_out(Fore.RED + f"Error looking up DNS for {domain}: " + str(e))
-
-async def reverse_dns_lookup(ip):
-    try:
-        result = socket.gethostbyaddr(ip)
-        print_out(Style.BRIGHT + Fore.WHITE + "[REVERSE DNS] " + Fore.GREEN + f"IP: {ip} - Hostname: {result[0]}")
-    except socket.herror:
+            if not inCloudFlare(str(ip)):
+                print_out(Style.BRIGHT + Fore.WHITE + "[DNS LOOKUP] " + Fore.GREEN + domain + " resolves to " + str(ip))
+            else:
+                print_out(Style.BRIGHT + Fore.WHITE + "[DNS LOOKUP] " + Fore.RED + domain + " is behind Cloudflare")
+    except Exception:
         pass
 
-async def http_headers_analysis(target):
-    print_out(Fore.CYAN + "Analyzing HTTP headers for real IP...")
+def inCloudFlare(ip):
+    cloudflare_ranges = [
+        "173.245.48.0/20",
+        "103.21.244.0/22",
+        "103.22.200.0/22",
+        "103.31.4.0/22",
+        "141.101.64.0/18",
+        "108.162.192.0/18",
+        "190.93.240.0/20",
+        "188.114.96.0/20",
+        "197.234.240.0/22",
+        "198.41.128.0/17",
+        "162.158.0.0/15",
+        "104.16.0.0/12",
+        "172.64.0.0/13",
+        "131.0.72.0/22"
+    ]
 
-    try:
-        response = requests.get(f"http://{target}", timeout=10)
-        for header, value in response.headers.items():
-            if "server" in header.lower() or "via" in header.lower() or "x-forwarded-for" in header.lower():
-                print_out(Style.BRIGHT + Fore.WHITE + "[HTTP HEADER] " + Fore.GREEN + f"{header}: {value}")
-    except Exception as e:
-        print_out(Fore.RED + "Error analyzing HTTP headers: " + str(e))
+    for subnet in cloudflare_ranges:
+        if ip_in_subnetwork(ip, subnet):
+            return True
+    return False
 
+def update():
+    print_out(Fore.CYAN + "Updating databases...")
+
+    # Update CloudFlare subnet database
+    cf_subnet_url = "https://www.cloudflare.com/ips-v4"
+    cf_subnet_file = "data/cf-subnet.txt"
+    r = requests.get(cf_subnet_url, stream=True)
+    with open(cf_subnet_file, 'wb') as f:
+        for chunk in r.iter_content(4000):
+            f.write(chunk)
+    print_out(Fore.CYAN + "CloudFlare subnet database updated")
+
+    # Update Crimeflare database
+    crimeflare_url = "https://cf.ozeliurs.com/ipout"
+    crimeflare_file = "data/ipout"
+    r = requests.get(crimeflare_url, stream=True)
+    with open(crimeflare_file, 'wb') as f:
+        for chunk in r.iter_content(4000):
+            f.write(chunk)
+    print_out(Fore.CYAN + "Crimeflare database updated")
+
+# Main function
 async def main():
-    parser = argparse.ArgumentParser(description="DNS Recon Tool")
+    parser = argparse.ArgumentParser(description="CloudFail Enhanced")
     parser.add_argument('--target', metavar='TARGET', type=str, help='The target URL of the website')
     parser.add_argument('--tor', action='store_true', help='Enable TOR routing')
+    parser.add_argument('--update', action='store_true', help='Update the databases')
 
     args = parser.parse_args()
 
@@ -145,45 +176,18 @@ async def main():
             print_out(Fore.RED + "Error connecting to TOR: " + str(e))
             return
 
+    if args.update:
+        update()
+
     if args.target:
         print_out(Fore.CYAN + f"Analyzing {args.target}")
 
-        await dnsdumpster_search(args.target)
-        await crtsh_search(args.target)
-        await reverse_dns_lookup(resolve_ip(args.target))
-        await http_headers_analysis(args.target)
+       await dnsdumpster(args.target)
+        await crt_sh_search(args.target)
         await dns_lookup(args.target)
-        await mx_records(args.target)
-        await cname_records(args.target)
-        await ip_history(args.target)
     else:
         print_out(Fore.RED + "No target specified")
         return
 
-async def mx_records(domain):
-    print_out(Fore.CYAN + f"Fetching MX records for {domain}")
-
-    try:
-        answers = dns.resolver.resolve(domain, 'MX')
-        for rdata in answers:
-            print_out(Style.BRIGHT + Fore.WHITE + "[MX RECORD] " + Fore.GREEN + f"{domain} => {rdata.exchange}")
-    except Exception as e:
-        print_out(Fore.RED + f"Error fetching MX records for {domain}: " + str(e))
-
-async def cname_records(domain):
-    print_out(Fore.CYAN + f"Fetching CNAME records for {domain}")
-
-    try:
-        answers = dns.resolver.resolve(domain, 'CNAME')
-        for rdata in answers:
-            print_out(Style.BRIGHT + Fore.WHITE + "[CNAME RECORD] " + Fore.GREEN + f"{domain} => {rdata.target}")
-except Exception as e:
-print_out(Fore.RED + f"Error fetching CNAME records for {domain}: " + str(e))
-
-async def ip_history(domain):
-print_out(Fore.CYAN + f"Fetching IP address history for {domain}")
-
-# Placeholder for IP address history retrieval
-
-if name == "main":
-asyncio.run(main())
+    if __name__ == "__main__":
+    asyncio.run(main())
