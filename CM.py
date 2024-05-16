@@ -83,8 +83,8 @@ async def dnsdumpster(target):
     # Placeholder for DNSDumpster code. Add actual API call if available.
 
 async def crt_sh_search(target):
-    print_out(Fore.CYAN + "Searching crt.sh for certificates related to the target...")
-
+    print_out(Fore.CYAN + "Searching Certificate Transparency logs for subdomains...")
+    
     url = f"https://crt.sh/?q=%25.{target}&output=json"
     try:
         response = requests.get(url)
@@ -92,79 +92,54 @@ async def crt_sh_search(target):
             certs = response.json()
             for cert in certs:
                 subdomain = cert['name_value']
-                print_out(Style.BRIGHT + Fore.WHITE + "[CT LOG] " + Fore.GREEN + f"Subdomain: {subdomain}")
-                ip_address = resolve_ip(subdomain)
-                if ip_address:
-                    print("- IP address:", ip_address)
-                else:
-                    print("- IP address: Not found")
+                print_out(Style.BRIGHT + Fore.WHITE + "[CRT.SH] " + Fore.GREEN + f"Subdomain: {subdomain}")
     except Exception as e:
-        print_out(Fore.RED + "Error searching CT logs: " + str(e))
+        print_out(Fore.RED + "Error searching CRT.SH logs: " + str(e))
 
 async def dns_lookup(domain):
+    print_out(Fore.CYAN + f"Performing DNS lookup for domain: {domain}...")
+    
     try:
-        answers = dns.resolver.resolve(domain)
+        answers = dns.resolver.query(domain, 'A')
         for ip in answers:
-            if not inCloudFlare(str(ip)):
-                print_out(Style.BRIGHT + Fore.WHITE + "[DNS LOOKUP] " + Fore.GREEN + domain + " resolves to " + str(ip))
-            else:
-                print_out(Style.BRIGHT + Fore.WHITE + "[DNS LOOKUP] " + Fore.RED + domain + " is behind Cloudflare")
-    except Exception:
-        pass
+            print_out(Style.BRIGHT + Fore.WHITE + "[DNS LOOKUP] " + Fore.GREEN + f"{domain} resolves to {ip}")
+    except Exception as e:
+        print_out(Fore.RED + f"Error performing DNS lookup for {domain}: {str(e)}")
 
-def inCloudFlare(ip):
-    cloudflare_ranges = [
-        "173.245.48.0/20",
-        "103.21.244.0/22",
-        "103.22.200.0/22",
-        "103.31.4.0/22",
-        "141.101.64.0/18",
-        "108.162.192.0/18",
-        "190.93.240.0/20",
-        "188.114.96.0/20",
-        "197.234.240.0/22",
-        "198.41.128.0/17",
-        "162.158.0.0/15",
-        "104.16.0.0/12",
-        "172.64.0.0/13",
-        "131.0.72.0/22"
-    ]
+async def cname_lookup(domain):
+    print_out(Fore.CYAN + f"Performing CNAME lookup for domain: {domain}...")
+    
+    try:
+        answers = dns.resolver.query(domain, 'CNAME')
+        for cname in answers:
+            print_out(Style.BRIGHT + Fore.WHITE + "[CNAME LOOKUP] " + Fore.GREEN + f"{domain} has CNAME record: {cname}")
+    except Exception as e:
+        print_out(Fore.RED + f"Error performing CNAME lookup for {domain}: {str(e)}")
 
-    for subnet in cloudflare_ranges:
-        if ip_in_subnetwork(ip, subnet):
-            return True
-    return False
+async def mx_lookup(domain):
+    print_out(Fore.CYAN + f"Performing MX lookup for domain: {domain}...")
+    
+    try:
+        answers = dns.resolver.query(domain, 'MX')
+        for mx in answers:
+            print_out(Style.BRIGHT + Fore.WHITE + "[MX LOOKUP] " + Fore.GREEN + f"{domain} has MX record: {mx}")
+    except Exception as e:
+        print_out(Fore.RED + f"Error performing MX lookup for {domain}: {str(e)}")
 
-def update():
-    print_out(Fore.CYAN + "Updating databases...")
+async def reverse_ip_lookup(target):
+    print_out(Fore.CYAN + f"Performing reverse IP lookup for domain: {target}...")
+    
+    try:
+        result = socket.gethostbyaddr(target)
+        print_out(Style.BRIGHT + Fore.WHITE + "[REVERSE IP LOOKUP] " + Fore.GREEN + f"IP: {target} - Hostname: {result[0]}")
+    except Exception as e:
+        print_out(Fore.RED + f"Error performing reverse IP lookup for {target}: {str(e)}")
 
-    # Update CloudFlare subnet database
-    cf_subnet_url = "https://www.cloudflare.com/ips-v4"
-    cf_subnet_file = "data/cf-subnet.txt"
-    r = requests.get(cf_subnet_url, stream=True)
-    with open(cf_subnet_file, 'wb') as f:
-        for chunk in r.iter_content(4000):
-            f.write(chunk)
-    print_out(Fore.CYAN + "CloudFlare subnet database updated")
-
-    # Update Crimeflare database
-    crimeflare_url = "https://cf.ozeliurs.com/ipout"
-    crimeflare_file = "data/ipout"
-    r = requests.get(crimeflare_url, stream=True)
-    with open(crimeflare_file, 'wb') as f:
-        for chunk in r.iter_content(4000):
-            f.write(chunk)
-    print_out(Fore.CYAN + "Crimeflare database updated")
-
-# Main function
 async def main():
     parser = argparse.ArgumentParser(description="CloudFail Enhanced")
     parser.add_argument('--target', metavar='TARGET', type=str, help='The target URL of the website')
     parser.add_argument('--tor', action='store_true', help='Enable TOR routing')
     parser.add_argument('--update', action='store_true', help='Update the databases')
-    parser.add_argument('--shodan-api-key', metavar='SHODAN_API_KEY', type=str, required=False, help='Shodan API key')
-    parser.add_argument('--censys-api-id', metavar='CENSYS_API_ID', type=str, required=False, help='Censys API ID')
-    parser.add_argument('--censys-api-secret', metavar='CENSYS_API_SECRET', type=str, required=False, help='Censys API Secret')
 
     args = parser.parse_args()
 
@@ -188,6 +163,9 @@ async def main():
         await dnsdumpster(args.target)
         await crt_sh_search(args.target)
         await dns_lookup(args.target)
+        await cname_lookup(args.target)
+        await mx_lookup(args.target)
+        await reverse_ip_lookup(args.target)
     else:
         print_out(Fore.RED + "No target specified")
         return
