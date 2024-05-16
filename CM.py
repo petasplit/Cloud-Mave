@@ -162,6 +162,9 @@ async def main():
     parser.add_argument('--target', metavar='TARGET', type=str, help='The target URL of the website')
     parser.add_argument('--tor', action='store_true', help='Enable TOR routing')
     parser.add_argument('--update', action='store_true', help='Update the databases')
+    parser.add_argument('--shodan-api-key', metavar='SHODAN_API_KEY', type=str, required=False, help='Shodan API key')
+    parser.add_argument('--censys-api-id', metavar='CENSYS_API_ID', type=str, required=False, help='Censys API ID')
+    parser.add_argument('--censys-api-secret', metavar='CENSYS_API_SECRET', type=str, required=False, help='Censys API Secret')
 
     args = parser.parse_args()
 
@@ -182,12 +185,12 @@ async def main():
     if args.target:
         print_out(Fore.CYAN + f"Analyzing {args.target}")
 
-       await dnsdumpster(args.target)
+        await dnsdumpster(args.target)
         await crt_sh_search(args.target)
         await dns_lookup(args.target)
     else:
         print_out(Fore.RED + "No target specified")
         return
 
-    if __name__ == "__main__":
+if __name__ == "__main__":
     asyncio.run(main())
