@@ -187,20 +187,12 @@ async def certificate_transparency_scan(target):
             for cert in certs:
                 subdomain = cert['name_value']
                 print_out(Style.BRIGHT + Fore.WHITE + "[CT LOG] " + Fore.GREEN + f"Subdomain: {subdomain}")
-                # Inside the loop where subdomains are printed
-                print_out(Style.BRIGHT + "[CT LOG] Subdomain:", subdomain)
-                try:
-                    ip_address = resolve_ip(subdomain)
-                    if ip_address:
-                        print("- IP address:", ip_address)
-                    else:
-                        print("- IP address: Not found")
-                except Exception as e:
-                    print(f"Error resolving IP for {subdomain}: {e}")
-                    print("- IP address: Not found")
-                await dns_lookup(subdomain)
-        else:
-            print_out(Fore.RED + "Error retrieving CT logs")
+                ip_address = resolve_ip(subdomain)
+                if ip_address:
+                    print_out(Style.BRIGHT + "[CT LOG] Subdomain:", subdomain)
+                    print_out("- IP address:", ip_address)
+                else:
+                    print_out("- IP address: Not found")
     except Exception as e:
         print_out(Fore.RED + "Error searching CT logs: " + str(e))
 
