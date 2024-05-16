@@ -11,7 +11,7 @@ import re
 import subprocess
 import os
 import json
-from colorama import Fore, Style
+from colorama import Fore, Style  # Add import statement for colorama module
 import dns.resolver
 from shodan import Shodan
 from censys.search import CensysHosts
@@ -20,7 +20,7 @@ import collections
 collections.Callable = collections.abc.Callable
 
 # Initialize colorama
-colorama.init(Style.BRIGHT)
+colorama.init()
 
 # Utility functions
 def print_out(data, end='\n'):
