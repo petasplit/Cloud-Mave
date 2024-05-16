@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import asyncio
 import socket
@@ -169,7 +167,7 @@ async def reverse_dns_lookup(ip):
 async def http_headers_analysis(target):
     print_out(Fore.CYAN + "Analyzing HTTP headers for real IP...")
 
-    try:
+        try:
         response = requests.get(f"http://{target}", timeout=10)
         for header, value in response.headers.items():
             if "server" in header.lower() or "via" in header.lower() or "x-forwarded-for" in header.lower():
@@ -189,22 +187,17 @@ async def certificate_transparency_scan(target):
                 subdomain = cert['name_value']
                 print_out(Style.BRIGHT + Fore.WHITE + "[CT LOG] " + Fore.GREEN + f"Subdomain: {subdomain}")
                 # Inside the loop where subdomains are printed
-print(Style.BRIGHT + "[CT LOG] Subdomain:", subdomain)
-try:
-    ip_address = resolve_ip(subdomain)
-    if ip_address:
-        print("- IP address:", ip_address)
-    else:
-        print("- IP address: Not found")
-except Exception as e:
-    print(f"Error resolving IP for {subdomain}: {e}")
-    print("- IP address: Not found")
+                print(Style.BRIGHT + "[CT LOG] Subdomain:", subdomain)
+                try:
+                    ip_address = resolve_ip(subdomain)
+                    if ip_address:
+                        print("- IP address:", ip_address)
+                    else:
+                        print("- IP address: Not found")
+                except Exception as e:
+                    print(f"Error resolving IP for {subdomain}: {e}")
+                    print("- IP address: Not found")
 
-else:
-    print("- IP address: Not found")
-                await dns_lookup(subdomain)
-        else:
-            print_out(Fore.RED + "Error retrieving CT logs")
     except Exception as e:
         print_out(Fore.RED + "Error searching CT logs: " + str(e))
 
@@ -307,3 +300,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
