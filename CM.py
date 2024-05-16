@@ -75,8 +75,7 @@ def subnetwork_to_ip_range(subnetwork):
 async def dnsdumpster(target):
     print_out(Fore.CYAN + "Testing for misconfigured DNS using DNSDumpster...")
 
-    # This is a placeholder for the DNSDumpster code.
-    # You can replace it with the actual API call if needed.
+    # Placeholder for DNSDumpster code. Add actual API call if available.
 
 async def shodan_search(target, shodan_api_key):
     print_out(Fore.CYAN + "Searching for the target in Shodan...")
