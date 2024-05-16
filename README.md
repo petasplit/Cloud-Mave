@@ -1,6 +1,6 @@
 Installation Instructions:
 1. Install the necessary Python packages:
-pip install shodan censys-search colorama dnspython requests pysocks
+pip install shodan censys colorama dnspython requests pysocks
 
 2. Install sublist3r (if not already installed):
 git clone https://github.com/aboul3la/Sublist3r.git
